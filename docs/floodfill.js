@@ -62,9 +62,9 @@ function initializeHistory(startingGrid) {
 }   
 
 function rollBackHistory() {
-    if (grids.length > 0) {
-        grids = grids.slice(0, grids.length-1);
-        render(grids[grids.length-1]);
+    if (grids.length > 1) { // Prevent rollback if there is only one grid left
+        grids = grids.slice(0, grids.length - 1);
+        render(grids[grids.length - 1]);
     }
 }
 
@@ -95,10 +95,13 @@ function render(grid) {
 
 function updateGridAt(mousePositionX, mousePositionY) {
     const gridCoordinates = convertCartesiansToGrid(mousePositionX, mousePositionY);
-    const newGrid = grids[grids.length-1].slice(); 
-    floodFill(newGrid, gridCoordinates, newGrid[gridCoordinates.column * CELLS_PER_AXIS + gridCoordinates.row])
+    const currentGrid = grids[grids.length - 1]; 
+    const newGrid = currentGrid.slice(); // Copy the grid
+    const targetCell = gridCoordinates.row * CELLS_PER_AXIS + gridCoordinates.column;
+
+    floodFill(newGrid, gridCoordinates, newGrid[targetCell]);
     grids.push(newGrid);
-    render(grids[grids.length-1]);    
+    render(newGrid);    
 }
 
 function updatePlayerScore() {
@@ -106,17 +109,27 @@ playerScore = playerScore > 0 ? playerScore -= 1 : 0;
 }
 
 function floodFill(grid, gridCoordinate, colorToChange) { 
-    if (arraysAreEqual(colorToChange, replacementColor)) { return } //The current cell is already the selected color
-    else if (!arraysAreEqual(grid[gridCoordinate.row * CELLS_PER_AXIS + gridCoordinate.column], colorToChange)) { return }  //The current cell is a different color than the initially clicked-on cell
-    else {
+    console.log('Current Grid:', grid);
+    console.log('Grid Coordinate:', gridCoordinate);
+    console.log('Color to Change:', colorToChange);
+    
+    if (arraysAreEqual(colorToChange, replacementColor)) { 
+        console.log('Cell already the selected color.');
+        return;
+    } else if (!arraysAreEqual(grid[gridCoordinate.row * CELLS_PER_AXIS + gridCoordinate.column], colorToChange)) { 
+        console.log('Cell is a different color than the clicked one.');
+        return;
+    } else {
         grid[gridCoordinate.row * CELLS_PER_AXIS + gridCoordinate.column] = replacementColor;
+        console.log('Color changed at:', gridCoordinate);
+        updatePlayerScore(); // Only update score when a valid color change happens
         floodFill(grid, {column: Math.max(gridCoordinate.column - 1, 0), row: gridCoordinate.row}, colorToChange);
         floodFill(grid, {column: Math.min(gridCoordinate.column + 1, CELLS_PER_AXIS - 1), row: gridCoordinate.row}, colorToChange);
         floodFill(grid, {column: gridCoordinate.column, row: Math.max(gridCoordinate.row - 1, 0)}, colorToChange);
         floodFill(grid, {column: gridCoordinate.column, row: Math.min(gridCoordinate.row + 1, CELLS_PER_AXIS - 1)}, colorToChange);
     }
-    return
 }
+
 
 function restart() {
     startGame(grids[0]);
@@ -130,7 +143,6 @@ function restart() {
 
 canvas.addEventListener("mousedown", gridClickHandler);
 function gridClickHandler(event) {
-     updatePlayerScore();
     updateGridAt(event.offsetX, event.offsetY);
 }
 
@@ -150,8 +162,12 @@ function rotateGrid() {
 }
 
 colorSelectButtons.forEach(button => {
-    button.addEventListener("mousedown", () => replacementColor = CELL_COLORS[button.name])
+    button.addEventListener("mousedown", () => {
+        replacementColor = CELL_COLORS[button.name];
+        console.log('Selected Color:', replacementColor);
+    });
 });
+
 
 // #endregion
 
